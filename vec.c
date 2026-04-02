@@ -1,19 +1,194 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "vec.h"
+#include <assert.h>
 
-Vec* vec_create(int len) { return NULL; }
-void vec_free(Vec *v) {}
+Vec* vec_create(int len) {
+  Vec *output = malloc(sizeof(Vec));
+  if (output == NULL) return NULL;
+  float *buf = malloc(sizeof(float) * len);
+  if (output == NULL) return NULL;
+  output->data = buf;
+  output->len = len;
+  return output;
+}
 
-Vec*  vec_add(Vec *a, Vec *b) { return NULL; }
-Vec*  vec_sub(Vec *a, Vec *b) { return NULL; }
-Vec*  vec_mul(Vec *a, Vec *b) { return NULL; }
-Vec*  vec_div(Vec *a, Vec *b) { return NULL; }
-Vec*  vec_scale(Vec *a, float s) { return NULL; }
+void vec_destroy(Vec *v) {
+  free(v->data);
+  free(v);
+}
 
-float vec_sum(Vec *a) { return 0; }
-float vec_dot(Vec *a, Vec *b) { return 0; }
-float vec_min(Vec *a) { return 0; }
-float vec_max(Vec *a) { return 0; }
+Vec* vec_add(Vec *a, Vec *b, Vec *out) {
+  assert(a->len == b->len && a->len == out->len);
+  for (float *p = a->data, *q = b->data, *r = out->data; p < a->data + a->len;) {
+      *(r++) = *(p++) + *(q++);
+  }
+  return out;
+}
 
-void  vec_print(Vec *a) {}
+Vec* vec_sub(Vec *a, Vec *b, Vec *out) {
+  assert(a->len == b->len && a->len == out->len);
+  for (float *p = a->data, *q = b->data, *r = out->data; p < a->data + a->len;) {
+      *(r++) = *(p++) - *(q++);
+  }
+  return out;
+}
+
+Vec* vec_mul(Vec *a, Vec *b, Vec *out) {
+  assert(a->len == b->len && a->len == out->len);
+  for (float *p = a->data, *q = b->data, *r = out->data; p < a->data + a->len;) {
+      *(r++) = *(p++) * *(q++);
+  }
+  return out;
+}
+
+Vec* vec_div(Vec *a, Vec *b, Vec *out) {
+  assert(a->len == b->len && a->len == out->len);
+  for (float *p = a->data, *q = b->data, *r = out->data; p < a->data + a->len;) {
+      *(r++) = *(p++) / *(q++);
+  }
+  return out;
+}
+
+Vec* vec_scale(Vec *a, float s, Vec *out) {
+  assert(a->len == out->len);
+  for (float *p = a->data, *q = out->data; p < a->data + a->len;) {
+      *(q++) = *(p++) * s;
+  }
+  return out;
+}
+
+float vec_sum(Vec *a) {
+  float output = 0;
+  for (float *p=a->data; p < a->data + a->len; p++) output += *p;  
+  return output;
+}
+
+float vec_dot(Vec *a, Vec *b) {
+  assert(a->len == b->len);
+  assert(a->len < MAX_VEC_SZ);
+  float buf[MAX_VEC_SZ];
+  Vec tmp = {.data = buf, .len = a->len};
+  vec_mul(a, b, &tmp);
+  return vec_sum(&tmp);
+}
+
+float vec_min(Vec *a) {
+  float min = a->data[0];
+  for (float *p=a->data + 1; p < a->data + a->len; p++) {
+    if (*p < min) min = *p;
+  }
+  return min;
+}
+
+float vec_max(Vec *a) {
+  float max = a->data[0];
+  for (float *p=a->data + 1; p < a->data + a->len; p++) {
+    if (*p > max) max = *p;
+  }
+  return max;
+}
+
+void  vec_print(Vec *a) {
+  printf("[");
+  for (float *p=a->data; p < a->data + a->len; p++) {printf("%f,", *p);}
+  printf("]\n");
+}
+void vec_zero(Vec *a) {for (float *p=a->data; p < a->data + a->len; p++) *p = 0;}
+void vec_ones(Vec *a) {for (float *p=a->data; p < a->data + a->len; p++) *p = 1;}
+
+
+#ifdef TEST
+
+static void test_create_zero(void) {
+  printf("%s...", __func__);
+  Vec *v = vec_create(3);
+  assert(v->len == 3);
+  v->data[0] = 1.0;
+  v->data[1] = 1.0;
+  v->data[2] = 1.0;
+  vec_zero(v);
+  for (float *p = v->data; p < v->data + v->len; p++) assert(*p== 0);
+  printf(" PASS\n");
+}
+
+static void test_ones_scale(void) {
+  printf("%s...", __func__);
+  Vec *v = vec_create(3);
+  vec_ones(v);
+  Vec *v2 = vec_create(3);
+  vec_scale(v, 10, v2);
+  for (float *p = v2->data; p < v2->data + v2->len; p++) assert(*p== 10);
+  printf(" PASS\n");
+}
+
+static void test_mdas(void) {
+  printf("%s...", __func__);
+  Vec *v = vec_create(3);
+  vec_ones(v);
+  vec_add(v, v, v);
+  for (float *p = v->data; p < v->data + v->len; p++) assert(*p== 2);
+  vec_mul(v, v, v);
+  for (float *p = v->data; p < v->data + v->len; p++) assert(*p== 4);
+
+  Vec *v2 = vec_create(3);
+  vec_ones(v2);
+  vec_scale(v2, 2, v2);
+  
+  vec_div(v, v2, v);
+  for (float *p = v->data; p < v->data + v->len; p++) assert(*p== 2);
+  vec_sub(v, v2, v);
+  for (float *p = v->data; p < v->data + v->len; p++) assert(*p== 0);
+  printf(" PASS\n");
+}
+
+static void test_sum(void) {
+  printf("%s...", __func__);
+  Vec *v = vec_create(3);
+  v->data[0] = 1;
+  v->data[1] = 2;
+  v->data[2] = 3;
+  assert(vec_sum(v) == 6);
+
+  printf(" PASS\n");
+}
+
+static void test_dot(void) {
+  printf("%s...", __func__);
+  Vec *v = vec_create(3);
+  v->data[0] = 1;
+  v->data[1] = 2;
+  v->data[2] = 3;
+
+  Vec *v2 = vec_create(3);
+  v2->data[0] = 4;
+  v2->data[1] = 5;
+  v2->data[2] = 6;
+
+  assert(vec_dot(v, v2) == 32);
+  printf(" PASS\n");
+}
+
+static void test_minmax(void) {
+  printf("%s...", __func__);
+  Vec *v = vec_create(3);
+  v->data[2] = 1;
+  v->data[1] = 2;
+  v->data[0] = 3;
+
+  assert(vec_min(v) == 1);
+  assert(vec_max(v) == 3);
+  printf(" PASS\n");
+}
+
+int main(void) {
+  test_create_zero();
+  test_ones_scale();
+  test_mdas();
+  test_sum();
+  test_dot();
+  test_minmax();
+  return 0;
+}
+
+#endif
