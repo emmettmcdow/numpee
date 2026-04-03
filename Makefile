@@ -13,5 +13,8 @@ vec.o: vec.c
 test: vec.c
 	$(CC) $(CFLAGS) -DTEST -o test_vec vec.c && ./test_vec
 
+benchmark: vec.c
+	$(CC) $(CFLAGS) -DBENCHMARK -o test_vec vec.c && ./test_vec
+
 clean:
 	rm -f numpee.a vec.o vec.s test_vec

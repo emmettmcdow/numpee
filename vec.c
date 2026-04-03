@@ -5,7 +5,7 @@
 #include <immintrin.h>
 
 // ***************************************************************************** Universal CPU SISD
-#ifdef __GENERIC_ARCH__
+#ifdef NUMPEE_GENERIC
 static float* _cpu_vec_add(float *a, float *b, float *out, int len) {
   for (float *p = a, *q = b, *r = out; p < a + len;) {
       *(r++) = *(p++) + *(q++);
@@ -72,7 +72,7 @@ static float _cpu_vec_max(float *a, int len) {
 
 
 // *********************************************************************************** x86 CPU SIMD
-#ifdef __X86__
+#ifdef NUMPEE_X86
 #include <immintrin.h>
 
 static float* _x86_simd_vec_add(float *a, float *b, float *out, int len) {
@@ -380,4 +380,42 @@ int main(void) {
   return 0;
 }
 
+#endif
+
+#ifdef BENCHMARK
+#include <time.h>
+
+static void test_dot_identity(int len) {
+  Vec *a   = vec_create(len);
+  Vec *sq  = vec_create(len);
+
+  for (int i = 0; i < len; i++) a->data[i] = (float)i;
+
+  float via_dot = vec_dot(a, a);
+  vec_mul(a, a, sq);
+  float via_sum = vec_sum(sq);
+
+  assert(via_dot == via_sum);
+
+  vec_destroy(a); vec_destroy(sq);
+}
+
+int main(void) {
+#if defined(NUMPEE_X86)
+  printf("Benchmarking x86\n");
+#elif defined(NUMPEE_GENERIC)
+  printf("Benchmarking generic\n");
+#endif
+  time_t start = time(NULL);
+  int N_ITERATIONS = 1000;
+  for (int n = 0; n < N_ITERATIONS; n++) {
+    for (int i = 1; i < MAX_VEC_SZ; i++) {
+      test_dot_identity(i);
+    }
+  }
+  time_t end = time(NULL);
+
+  printf("Completed benchmark in %ld seconds\n", end - start);
+  return 0;
+}
 #endif

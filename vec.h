@@ -8,14 +8,16 @@ typedef struct {
 
 #define MAX_VEC_SZ 2048
 
-#if defined(__x86_64__) || defined(_M_X64) || defined(__x86_64__) || defined(_M_X64)
-// x86
+#if defined(NUMPEE_X86)
 #define PLAT_PRE(f) _x86_simd_ ## f
-#define __X86__
-#else
-// Fallback
+#elif defined(NUMPEE_GENERIC)
 #define PLAT_PRE(f) _cpu_ ## f
-#define __GENERIC_ARCH__
+#elif defined(__x86_64__) || defined(_M_X64)
+#define NUMPEE_X86
+#define PLAT_PRE(f) _x86_simd_ ## f
+#else
+#define NUMPEE_GENERIC
+#define PLAT_PRE(f) _cpu_ ## f
 #endif
 
 // Lifecycle
