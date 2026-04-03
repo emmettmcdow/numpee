@@ -8,6 +8,16 @@ typedef struct {
 
 #define MAX_VEC_SZ 2048
 
+#if defined(__x86_64__) || defined(_M_X64) || defined(__x86_64__) || defined(_M_X64)
+// x86
+#define PLAT_PRE(f) _x86_simd_ ## f
+#define __X86__
+#else
+// Fallback
+#define PLAT_PRE(f) _cpu_ ## f
+#define __GENERIC_ARCH__
+#endif
+
 // Lifecycle
 Vec*  vec_create(int len);
 void  vec_destroy(Vec *v);
@@ -31,3 +41,6 @@ void vec_zero(Vec *a);
 void vec_ones(Vec *a);
 
 #endif
+
+// Helpers
+#define MIN(a, b) ((a) < (b) ? (a) : (b))

@@ -1,5 +1,5 @@
 CC     = clang
-CFLAGS = -Wall -Wextra -Werror -O0 -g
+CFLAGS = -Wall -Wextra -Werror -O0 -g -mavx
 
 numpee.a: vec.o
 	ar rcs numpee.a vec.o
