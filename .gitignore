@@ -2,3 +2,4 @@
 *.o
 *.dSYM
 *.s
+test_vec

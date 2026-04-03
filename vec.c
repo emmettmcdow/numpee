@@ -2,6 +2,72 @@
 #include <stdio.h>
 #include "vec.h"
 #include <assert.h>
+#include <immintrin.h>
+
+// *********************************************************************************** Universal CPU SISD
+float* _cpu_vec_add(float *a, float *b, float *out, size_t len) {
+  for (float *p = a, *q = b, *r = out; p < a + len;) {
+      *(r++) = *(p++) + *(q++);
+  }
+  return out;
+}
+
+float* _cpu_vec_sub(float *a, float *b, float *out, size_t len) {
+  for (float *p = a, *q = b, *r = out; p < a + len;) {
+      *(r++) = *(p++) - *(q++);
+  }
+  return out;
+}
+
+float* _cpu_vec_mul(float *a, float *b, float *out, size_t len) {
+  for (float *p = a, *q = b, *r = out; p < a + len;) {
+      *(r++) = *(p++) * *(q++);
+  }
+  return out;
+}
+
+float* _cpu_vec_div(float *a, float *b, float *out, size_t len) {
+  for (float *p = a, *q = b, *r = out; p < a + len;) {
+      *(r++) = *(p++) / *(q++);
+  }
+  return out;
+}
+
+float* _cpu_vec_scale(float *a, float s, float *out, size_t len) {
+  for (float *p = a, *q = out; p < a + len;) {
+      *(q++) = *(p++) * s;
+  }
+  return out;
+}
+
+float _cpu_vec_sum(float *a, size_t len) {
+  float output = 0;
+  for (float *p=a; p < a + len; p++) output += *p;  
+  return output;
+}
+
+float _cpu_vec_dot(float *a, float *b, size_t len) {
+  float buf[MAX_VEC_SZ];
+  _cpu_vec_mul(a, b, buf, len);
+  return _cpu_vec_sum(buf, len);
+}
+
+float _cpu_vec_min(float *a, size_t len) {
+  float min = a[0];
+  for (float *p=a + 1; p < a + len; p++) {
+    if (*p < min) min = *p;
+  }
+  return min;
+}
+
+float _cpu_vec_max(float *a, size_t len) {
+  float max = a[0];
+  for (float *p=a + 1; p < a + len; p++) {
+    if (*p > max) max = *p;
+  }
+  return max;
+}
+
 
 Vec* vec_create(int len) {
   Vec *output = malloc(sizeof(Vec));
@@ -20,73 +86,50 @@ void vec_destroy(Vec *v) {
 
 Vec* vec_add(Vec *a, Vec *b, Vec *out) {
   assert(a->len == b->len && a->len == out->len);
-  for (float *p = a->data, *q = b->data, *r = out->data; p < a->data + a->len;) {
-      *(r++) = *(p++) + *(q++);
-  }
+  _cpu_vec_add(a->data, b->data, out->data, a->len);
   return out;
 }
 
 Vec* vec_sub(Vec *a, Vec *b, Vec *out) {
   assert(a->len == b->len && a->len == out->len);
-  for (float *p = a->data, *q = b->data, *r = out->data; p < a->data + a->len;) {
-      *(r++) = *(p++) - *(q++);
-  }
+  _cpu_vec_sub(a->data, b->data, out->data, a->len);
   return out;
 }
 
 Vec* vec_mul(Vec *a, Vec *b, Vec *out) {
   assert(a->len == b->len && a->len == out->len);
-  for (float *p = a->data, *q = b->data, *r = out->data; p < a->data + a->len;) {
-      *(r++) = *(p++) * *(q++);
-  }
+  _cpu_vec_mul(a->data, b->data, out->data, a->len);
   return out;
 }
 
 Vec* vec_div(Vec *a, Vec *b, Vec *out) {
   assert(a->len == b->len && a->len == out->len);
-  for (float *p = a->data, *q = b->data, *r = out->data; p < a->data + a->len;) {
-      *(r++) = *(p++) / *(q++);
-  }
+  _cpu_vec_div(a->data, b->data, out->data, a->len);
   return out;
 }
 
 Vec* vec_scale(Vec *a, float s, Vec *out) {
   assert(a->len == out->len);
-  for (float *p = a->data, *q = out->data; p < a->data + a->len;) {
-      *(q++) = *(p++) * s;
-  }
+  _cpu_vec_scale(a->data, s, out->data, a->len);
   return out;
 }
 
 float vec_sum(Vec *a) {
-  float output = 0;
-  for (float *p=a->data; p < a->data + a->len; p++) output += *p;  
-  return output;
+  return _cpu_vec_sum(a->data, a->len);
 }
 
 float vec_dot(Vec *a, Vec *b) {
   assert(a->len == b->len);
   assert(a->len < MAX_VEC_SZ);
-  float buf[MAX_VEC_SZ];
-  Vec tmp = {.data = buf, .len = a->len};
-  vec_mul(a, b, &tmp);
-  return vec_sum(&tmp);
+  return _cpu_vec_dot(a->data, b->data, a->len);
 }
 
 float vec_min(Vec *a) {
-  float min = a->data[0];
-  for (float *p=a->data + 1; p < a->data + a->len; p++) {
-    if (*p < min) min = *p;
-  }
-  return min;
+  return _cpu_vec_min(a->data, a->len);
 }
 
 float vec_max(Vec *a) {
-  float max = a->data[0];
-  for (float *p=a->data + 1; p < a->data + a->len; p++) {
-    if (*p > max) max = *p;
-  }
-  return max;
+  return _cpu_vec_max(a->data, a->len);
 }
 
 void  vec_print(Vec *a) {
@@ -96,7 +139,6 @@ void  vec_print(Vec *a) {
 }
 void vec_zero(Vec *a) {for (float *p=a->data; p < a->data + a->len; p++) *p = 0;}
 void vec_ones(Vec *a) {for (float *p=a->data; p < a->data + a->len; p++) *p = 1;}
-
 
 #ifdef TEST
 
